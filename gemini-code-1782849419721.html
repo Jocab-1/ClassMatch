@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassMatch</title>
+    <style>
+        :root {
+            /* Dark Mode Defaults */
+            --bg-color: #121212;
+            --text-color: #ffffff;
+            --container-bg: #1e1e1e;
+            --primary-blue: #3b82f6;
+            --primary-hover: #2563eb;
+            --border-color: #333333;
+            --disabled-color: #555555;
+            --danger-color: #ef4444;
+        }
+
+        [data-theme="light"] {
+            --bg-color: #f3f4f6;
+            --text-color: #1f2937;
+            --container-bg: #ffffff;
+            --primary-blue: #2563eb;
+            --primary-hover: #1d4ed8;
+            --border-color: #e5e7eb;
+            --disabled-color: #d1d5db;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        #theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: var(--container-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            z-index: 10;
+        }
+
+        #app-container {
+            background: var(--container-bg);
+            width: 100%;
+            max-width: 600px;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-top: 60px;
+            align-self: flex-start;
+        }
+
+        h1, h2, h3 { text-align: center; margin-bottom: 15px; }
+        .instruction { text-align: center; font-size: 0.9em; margin-bottom: 20px; opacity: 0.8; }
+
+        .hidden { display: none !important; }
+        .screen { animation: fadeIn 0.3s ease-in-out; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Buttons */
+        .button-group { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
+        button { padding: 12px; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; transition: 0.2s; }
+        .primary-btn { background: var(--primary-blue); color: white; font-weight: bold; }
+        .primary-btn:hover { background: var(--primary-hover); }
+        .secondary-btn { background: transparent; border: 2px solid var(--primary-blue); color: var(--primary-blue); font-weight: bold; }
+        .secondary-btn:hover { background: var(--primary-blue); color: white; }
+        .danger-btn { background: var(--danger-color); color: white; font-weight: bold; width: 100%; margin-bottom: 15px; }
+        button:disabled { background: var(--disabled-color); border-color: var(--disabled-color); color: rgba(255,255,255,0.5); cursor: not-allowed; }
+
+        /* Forms & Tables */
+        .input-group { margin-bottom: 20px; }
+        input[type="text"] { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-color); color: var(--text-color); margin-top: 5px;}
+        .row { display: grid; grid-template-columns: 0.5fr 1.5fr 1.5fr; gap: 10px; margin-bottom: 10px; align-items: center; }
+        .row.header { font-weight: bold; text-align: center; font-size: 0.9rem; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
+        .row div:first-child { text-align: center; font-weight: bold; }
+        .lunch-selection { margin-top: 20px; display: flex; justify-content: space-around; background: var(--bg-color); padding: 15px; border-radius: 8px;}
+
+        /* Lists & Modals */
+        .user-item { padding: 15px; border-bottom: 1px solid var(--border-color); cursor: pointer; text-align: center; transition: 0.2s;}
+        .user-item:hover { background: var(--bg-color); }
+
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 100; }
+        .modal-content { background: var(--container-bg); padding: 20px; border-radius: 12px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto;}
+        .modal-content #btn-close-modal { width: 100%; margin-top: 20px; }
+
+        /* Carousel / Spinner */
+        .spinner { border: 4px solid var(--border-color); border-top: 4px solid var(--primary-blue); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 40px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .carousel-controls { display: flex; justify-content: space-between; margin-top: 30px; }
+        #carousel-matches-list { margin-top: 20px; background: var(--bg-color); border-radius: 8px; padding: 15px; min-height: 150px;}
+        #carousel-matches-list p { margin-bottom: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; text-align: center;}
+    </style>
+</head>
+<body>
+
+    <button id="theme-toggle">☀️ Light Mode</button>
+
+    <div id="app-container">
+        
+        <section id="entrance-screen" class="screen active">
+            <h1>ClassMatch</h1>
+            <p style="text-align: center; margin-bottom: 20px;">Find out who shares your classes and lunch!</p>
+            <div class="button-group">
+                <button id="btn-nav-schedule" class="primary-btn">My Schedule</button>
+                <button id="btn-nav-matches" class="secondary-btn" disabled>Find Class Matches</button>
+                <button id="btn-nav-other" class="secondary-btn" disabled>Other Schedules</button>
+            </div>
+        </section>
+
+        <section id="schedule-screen" class="screen hidden">
+            <h2>My Schedule</h2>
+            <div class="input-group">
+                <label for="user-name">Your Name:</label>
+                <input type="text" id="user-name" placeholder="First Last" required>
+            </div>
+            
+            <p class="instruction"><em>Please use the teacher's LAST name only.</em></p>
+            
+            <div id="schedule-table">
+                <div class="row header">
+                    <div>Period</div>
+                    <div>Class Name</div>
+                    <div>Teacher (Last Name)</div>
+                </div>
+            </div>
+
+            <div class="lunch-selection">
+                <h3>Lunch:</h3>
+                <label><input type="radio" name="lunch" value="5"> 5</label>
+                <label><input type="radio" name="lunch" value="7"> 7</label>
+                <label><input type="radio" name="lunch" value="9"> 9</label>
+                <label><input type="radio" name="lunch" value="No lunch" checked> None</label>
+            </div>
+
+            <div class="button-group">
+                <button id="btn-submit-schedule" class="primary-btn">Submit</button>
+                <button id="btn-back-from-schedule" class="secondary-btn">Back</button>
+            </div>
+        </section>
+
+        <section id="other-schedules-screen" class="screen hidden">
+            <h2>Other Schedules</h2>
+            <div id="user-list"></div>
+            <div class="button-group">
+                <button id="btn-back-from-other" class="secondary-btn">Back</button>
+            </div>
+        </section>
+
+        <section id="matches-screen" class="screen hidden">
+            <div id="loading-spinner" class="spinner hidden"></div>
+            <div id="carousel-container" class="hidden">
+                <h2 id="carousel-class-name">Loading...</h2>
+                <h3 id="carousel-teacher-name" style="text-align: center; font-weight: normal; font-size: 1.1rem; opacity: 0.9;"></h3>
+                <div id="carousel-matches-list"></div>
+                <div class="carousel-controls">
+                    <button id="btn-back-from-matches" class="secondary-btn hidden">Back to Main</button>
+                    <div style="flex-grow: 1;"></div>
+                    <button id="btn-next-match" class="primary-btn">Next</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="admin-screen" class="screen hidden">
+            <h2>ADMIN PANEL</h2>
+            <p style="text-align: center; margin-bottom: 20px; color: var(--danger-color);">Warning: This action cannot be undone.</p>
+            <button id="btn-clear-data" class="danger-btn">Clear All Data</button>
+            <button id="btn-back-from-admin" class="secondary-btn" style="width: 100%;">Back</button>
+        </section>
+
+        <div id="schedule-modal" class="modal hidden">
+            <div class="modal-content">
+                <h2 id="modal-title">Schedule</h2>
+                <div id="modal-body" style="line-height: 1.8; margin-top: 15px;"></div>
+                <button id="btn-close-modal" class="secondary-btn">Close</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCe-JDSN83USeRvFeJjCWVKHFpgYRP64HU",
+            authDomain: "classmatch-cf25f.firebaseapp.com",
+            projectId: "classmatch-cf25f",
+            storageBucket: "classmatch-cf25f.firebasestorage.app",
+            messagingSenderId: "943997669365",
+            appId: "1:943997669365:web:499c49667a147c31c79abc"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let currentUserData = null;
+        const periods = ["1", "2", "3", "4", "6", "8", "10", "11"];
+        let allUsersData = [];
+        let carouselIndex = 0;
+        let carouselSlides = []; 
+
+        const themeToggle = document.getElementById('theme-toggle');
+        const screens = {
+            entrance: document.getElementById('entrance-screen'),
+            schedule: document.getElementById('schedule-screen'),
+            other: document.getElementById('other-schedules-screen'),
+            matches: document.getElementById('matches-screen'),
+            admin: document.getElementById('admin-screen')
+        };
+
+        const btnNavSchedule = document.getElementById('btn-nav-schedule');
+        const btnNavMatches = document.getElementById('btn-nav-matches');
+        const btnNavOther = document.getElementById('btn-nav-other');
+        const backBtns = document.querySelectorAll('[id^="btn-back-"]');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('theme') === 'light') {
+                document.body.setAttribute('data-theme', 'light');
+                themeToggle.innerText = '🌙 Dark Mode';
+            }
+            const savedUser = localStorage.getItem('classMatchUser');
+            if (savedUser) {
+                currentUserData = JSON.parse(savedUser);
+                enableAppFeatures();
+            }
+            generateScheduleTable();
+        });
+
+        themeToggle.addEventListener('click', () => {
+            if (document.body.getAttribute('data-theme') === 'light') {
+                document.body.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'dark');
+                themeToggle.innerText = '☀️ Light Mode';
+            } else {
+                document.body.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+                themeToggle.innerText = '🌙 Dark Mode';
+            }
+        });
+
+        function switchScreen(screenName) {
+            Object.values(screens).forEach(screen => screen.classList.add('hidden'));
+            screens[screenName].classList.remove('hidden');
+        }
+
+        btnNavSchedule.addEventListener('click', () => switchScreen('schedule'));
+        btnNavOther.addEventListener('click', () => { loadOtherSchedules(); switchScreen('other'); });
+        btnNavMatches.addEventListener('click', () => { startMatchesCarousel(); switchScreen('matches'); });
+        backBtns.forEach(btn => btn.addEventListener('click', () => switchScreen('entrance')));
+
+        function enableAppFeatures() {
+            btnNavMatches.disabled = false;
+            btnNavOther.disabled = false;
+        }
+
+        function generateScheduleTable() {
+            const table = document.getElementById('schedule-table');
+            periods.forEach(p => {
+                const row = document.createElement('div');
+                row.className = 'row';
+                row.innerHTML = `
+                    <div>${p}</div>
+                    <input type="text" id="class-${p}" placeholder="Class">
+                    <input type="text" id="teacher-${p}" placeholder="Teacher">
+                `;
+                table.appendChild(row);
+            });
+        }
+
+        document.getElementById('btn-submit-schedule').addEventListener('click', async () => {
+            let nameInput = document.getElementById('user-name').value.trim();
+            if (!nameInput) { alert("Please enter your name."); return; }
+            if (nameInput.toUpperCase() === "ADMIN") { switchScreen('admin'); return; }
+
+            try {
+                const q = query(collection(db, "users"), where("nameLower", "==", nameInput.toLowerCase()));
+                const querySnapshot = await getDocs(q);
+                let finalName = nameInput;
+
+                if (!querySnapshot.empty) {
+                    const isSamePerson = confirm(`A schedule for "${nameInput}" already exists. Is this you returning?\n\nClick OK to auto-fill and return to the main menu.\nClick Cancel if you are a different person.`);
+                    if (isSamePerson) {
+                        const existingUserData = querySnapshot.docs[0].data();
+                        autoFillSchedule(existingUserData);
+                        switchScreen('entrance');
+                        return; // Exits loop without creating a duplicate record in Firebase
+                    } else {
+                        const initial = prompt("Please enter your last initial to distinguish your schedule:");
+                        if (!initial) return;
+                        finalName = `${nameInput} ${initial}`;
+                    }
+                }
+
+                const schedule = {};
+                periods.forEach(p => {
+                    schedule[p] = {
+                        className: document.getElementById(`class-${p}`).value.trim(),
+                        teacher: document.getElementById(`teacher-${p}`).value.trim().toLowerCase()
+                    };
+                });
+                const lunch = document.querySelector('input[name="lunch"]:checked').value;
+
+                const userData = { name: finalName, nameLower: finalName.toLowerCase(), schedule: schedule, lunch: lunch };
+                await addDoc(collection(db, "users"), userData);
+                localStorage.setItem('classMatchUser', JSON.stringify(userData));
+                currentUserData = userData;
+                enableAppFeatures();
+                alert("Schedule saved successfully!");
+                switchScreen('entrance');
+            } catch (error) {
+                alert("Error saving schedule.");
+            }
+        });
+
+        function autoFillSchedule(data) {
+            document.getElementById('user-name').value = data.name;
+            periods.forEach(p => {
+                if(data.schedule[p]) {
+                    document.getElementById(`class-${p}`).value = data.schedule[p].className;
+                    document.getElementById(`teacher-${p}`).value = data.schedule[p].teacher;
+                }
+            });
+            document.querySelector(`input[name="lunch"][value="${data.lunch}"]`).checked = true;
+            localStorage.setItem('classMatchUser', JSON.stringify(data));
+            currentUserData = data;
+            enableAppFeatures();
+        }
+
+        async function loadOtherSchedules() {
+            const list = document.getElementById('user-list');
+            list.innerHTML = "Loading...";
+            const querySnapshot = await getDocs(collection(db, "users"));
+            list.innerHTML = "";
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                if (currentUserData && data.nameLower === currentUserData.nameLower) return;
+                const div = document.createElement('div');
+                div.className = 'user-item';
+                div.innerText = data.name;
+                div.addEventListener('click', () => showScheduleModal(data));
+                list.appendChild(div);
+            });
+            if (list.innerHTML === "") list.innerHTML = "<p style='text-align:center;'>No choices found yet!</p>";
+        }
+
+        function showScheduleModal(data) {
+            const modal = document.getElementById('schedule-modal');
+            document.getElementById('modal-title').innerText = `${data.name}'s Schedule`;
+            let html = '';
+            periods.forEach(p => {
+                const cls = data.schedule[p].className || "Free";
+                const tch = data.schedule[p].teacher || "-";
+                html += `<p><strong>Period ${p}:</strong> ${cls} (${tch.toUpperCase()})</p>`;
+            });
+            html += `<p><strong>Lunch Period:</strong> ${data.lunch}</p>`;
+            document.getElementById('modal-body').innerHTML = html;
+            modal.classList.remove('hidden');
+        }
+
+        document.getElementById('btn-close-modal').addEventListener('click', () => {
+            document.getElementById('schedule-modal').classList.add('hidden');
+        });
+
+        async function startMatchesCarousel() {
+            document.getElementById('loading-spinner').classList.remove('hidden');
+            document.getElementById('carousel-container').classList.add('hidden');
+            document.getElementById('btn-back-from-matches').classList.add('hidden');
+            document.getElementById('btn-next-match').classList.remove('hidden');
+
+            const querySnapshot = await getDocs(collection(db, "users"));
+            allUsersData = [];
+            querySnapshot.forEach(doc => {
+                const data = doc.data();
+                if (data.nameLower !== currentUserData.nameLower) allUsersData.push(data);
+            });
+
+            buildCarouselData();
+            document.getElementById('loading-spinner').classList.add('hidden');
+            document.getElementById('carousel-container').classList.remove('hidden');
+            carouselIndex = 0;
+            renderCarouselSlide();
+        }
+
+        function buildCarouselData() {
+            carouselSlides = [];
+            periods.forEach(p => {
+                if (!currentUserData.schedule[p]) return;
+                const myTeacher = currentUserData.schedule[p].teacher;
+                const myClass = currentUserData.schedule[p].className;
+                if (!myTeacher) return;
+                let matches = [];
+                allUsersData.forEach(user => {
+                    if (user.schedule[p] && user.schedule[p].teacher === myTeacher) matches.push(user.name);
+                });
+                carouselSlides.push({
+                    title: `Period ${p}: ${myClass || "Class"}`,
+                    subtitle: `Teacher: ${myTeacher.toUpperCase()}`,
+                    matches: matches
+                });
+            });
+
+            if (currentUserData.lunch !== "No lunch") {
+                let lunchMatches = [];
+                allUsersData.forEach(user => {
+                    if (user.lunch === currentUserData.lunch) lunchMatches.push(user.name);
+                });
+                carouselSlides.push({
+                    title: `Lunch Period ${currentUserData.lunch}`,
+                    subtitle: "Students sharing your lunch hour",
+                    matches: lunchMatches
+                });
+            }
+        }
+
+        function renderCarouselSlide() {
+            const slide = carouselSlides[carouselIndex];
+            if (!slide) {
+                document.getElementById('carousel-class-name').innerText = "Finished";
+                document.getElementById('carousel-teacher-name').innerText = "";
+                document.getElementById('carousel-matches-list').innerHTML = "<p>You have viewed all matching cycles.</p>";
+                document.getElementById('btn-next-match').classList.add('hidden');
+                document.getElementById('btn-back-from-matches').classList.remove('hidden');
+                return;
+            }
+            document.getElementById('carousel-class-name').innerText = slide.title;
+            document.getElementById('carousel-teacher-name').innerText = slide.subtitle;
+            const list = document.getElementById('carousel-matches-list');
+            if (slide.matches.length > 0) {
+                list.innerHTML = slide.matches.map(name => `<p>${name}</p>`).join('');
+            } else {
+                list.innerHTML = "<p><em>No matches found for this period.</em></p>";
+            }
+
+            if (carouselIndex === carouselSlides.length - 1) {
+                document.getElementById('btn-next-match').classList.add('hidden');
+                document.getElementById('btn-back-from-matches').classList.remove('hidden');
+            }
+        }
+
+        document.getElementById('btn-next-match').addEventListener('click', () => {
+            if (carouselIndex < carouselSlides.length - 1) {
+                carouselIndex++;
+                renderCarouselSlide();
+            }
+        });
+
+        document.getElementById('btn-clear-data').addEventListener('click', async () => {
+            if (confirm("Are you SURE you want to delete ALL schedules?")) {
+                const querySnapshot = await getDocs(collection(db, "users"));
+                querySnapshot.forEach(async (d) => {
+                    await deleteDoc(doc(db, "users", d.id));
+                });
+                alert("Database cleared.");
+                localStorage.removeItem('classMatchUser');
+                location.reload();
+            }
+        });
+    </script>
+</body>
+</html>
